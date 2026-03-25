@@ -4,7 +4,7 @@ const path    = require('path');
 
 const app          = express();
 const PORT         = process.env.PORT || 3001;
-const RIOT_API_KEY = process.env.RIOT_API_KEY || 'RGAPI-e5102d3b-1faa-4f06-850e-7696afea16f3';
+const RIOT_API_KEY = process.env.RIOT_API_KEY;
 
 // ─── Season config ─────────────────────────────────────────────────────────────
 // Bump this string whenever a new ranked season starts.
