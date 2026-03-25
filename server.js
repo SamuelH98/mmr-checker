@@ -141,6 +141,9 @@ app.get('/config', (req, res) => {
 // ─── Static ─────────────────────────────────────────────────────────────────────
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
+// This file is used to verify domain ownership for Riot's API key system. It must be served from the root.
+app.get('//riot.txt', (req, res) => res.sendFile(path.join(__dirname, 'riot.txt')));
+
 app.listen(PORT, () => {
   console.log(`MMR proxy + cache running on http://localhost:${PORT}`);
 });
