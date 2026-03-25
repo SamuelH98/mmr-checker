@@ -143,5 +143,4 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 app.listen(PORT, () => {
   console.log(`MMR proxy + cache running on http://localhost:${PORT}`);
-  console.log(`API key: ${RIOT_API_KEY.slice(0, 10)}...`);
 });
