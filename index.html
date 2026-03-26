@@ -65,7 +65,7 @@
     position: sticky; top: 0; z-index: 10;
   }
 
-  .logo { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; }
+  .logo { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; display: flex; align-items: center; }
   .logo span { color: var(--accent); }
 
   .header-right { display: flex; align-items: center; gap: 14px; }
@@ -260,12 +260,110 @@
     .mmr-estimate { text-align: left; }
     .header-note { display: none; }
   }
+
+  /* ── Page nav ── */
+  .page-nav {
+    display: flex; gap: 2px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    padding: 0 40px;
+  }
+  .page-nav-btn {
+    padding: 12px 18px; font-size: 13px; font-weight: 500;
+    border: none; background: none; cursor: pointer;
+    color: var(--text-mid); border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: color 0.15s, border-color 0.15s;
+    font-family: 'DM Sans', sans-serif; letter-spacing: -0.01em;
+  }
+  .page-nav-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+  .page-nav-btn:hover:not(.active) { color: var(--text); }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── Leaderboard ── */
+  .lb-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .lb-sort-label { font-size: 12px; color: var(--text-light); white-space: nowrap; }
+  .lb-sort-btns  { display: flex; gap: 4px; }
+  .lb-sort-btn {
+    padding: 5px 12px; font-size: 12px; font-weight: 500;
+    border: 1px solid var(--border); border-radius: 5px;
+    background: var(--surface2); color: var(--text-mid); cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+  }
+  .lb-sort-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .lb-refresh-btn {
+    margin-left: auto; padding: 5px 14px; font-size: 12px; font-weight: 500;
+    border: 1px solid var(--border); border-radius: 5px;
+    background: var(--surface2); color: var(--text-mid); cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .lb-refresh-btn:hover { background: var(--border); color: var(--text); }
+  .lb-refresh-btn.spinning .lb-refresh-icon { animation: spin 0.7s linear infinite; display: inline-block; }
+  .lb-empty {
+    text-align: center; padding: 48px 24px;
+    color: var(--text-light); font-size: 13px; line-height: 1.7;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .lb-empty strong { display: block; font-size: 15px; color: var(--text-mid); margin-bottom: 6px; }
+  .lb-table { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .lb-header-row {
+    display: grid; grid-template-columns: 32px 1fr 120px 120px 80px 34px;
+    gap: 8px; padding: 8px 18px;
+    background: var(--surface2); border-bottom: 1px solid var(--border);
+  }
+  .lb-header-row span { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-light); }
+  .lb-row {
+    display: grid; grid-template-columns: 32px 1fr 120px 120px 80px 34px;
+    align-items: center; gap: 8px; padding: 12px 18px;
+    border-bottom: 1px solid var(--border); transition: background 0.15s;
+  }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-row:hover { background: var(--surface2); }
+  .lb-row.lb-new { animation: lbPulse 1.6s ease-out forwards; }
+  @keyframes lbPulse { 0% { background: rgba(79,127,255,0.18); } 100% { background: transparent; } }
+  .lb-pos { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text-light); }
+  .lb-pos.medal-1 { color: #d4a83c; font-weight: 700; }
+  .lb-pos.medal-2 { color: #8aaabb; font-weight: 700; }
+  .lb-pos.medal-3 { color: #c07a55; font-weight: 700; }
+  .lb-name-wrap { min-width: 0; }
+  .lb-name { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: baseline; gap: 4px; }
+  .lb-name-tag { color: var(--text-light); font-size: 12px; font-weight: 400; }
+  .lb-region { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text-light); background: var(--surface2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 3px; }
+  .lb-mmr-cell { }
+  .lb-mmr-val { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; }
+  .lb-mmr-tier { font-size: 10px; color: var(--text-light); margin-top: 1px; }
+  .lb-wr { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; }
+  .lb-del {
+    background: none; border: none; cursor: pointer; color: var(--text-light);
+    font-size: 15px; padding: 3px 5px; border-radius: 4px; line-height: 1;
+    transition: color 0.15s, background 0.15s;
+  }
+  .lb-del:hover { color: var(--warn); background: rgba(224,96,58,0.1); }
+  @media (max-width: 540px) {
+    .page-nav { padding: 0 14px; }
+    .lb-header-row, .lb-row { grid-template-columns: 28px 1fr 90px 80px 34px; }
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">mmr<span>.</span>checker</div>
+  <div class="logo">
+    <svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;margin-right:8px;flex-shrink:0" alt="League of Legends">
+      <!-- Blue hex background -->
+      <polygon points="50,2 93,26 93,74 50,98 7,74 7,26" fill="#0A1428"/>
+      <!-- Gold outer border -->
+      <polygon points="50,2 93,26 93,74 50,98 7,74 7,26" fill="none" stroke="#C89B3C" stroke-width="4"/>
+      <!-- Inner gold hex ring -->
+      <polygon points="50,14 82,32 82,68 50,86 18,68 18,32" fill="none" stroke="#C89B3C" stroke-width="2" opacity="0.6"/>
+      <!-- LoL "L" lettermark in gold -->
+      <text x="50" y="66" font-family="Georgia, serif" font-size="52" font-weight="bold" fill="#C89B3C" text-anchor="middle" letter-spacing="-2">LoL</text>
+    </svg>mmr<span>.</span>checker
+  </div>
   <div class="header-right">
     <span class="header-note" id="headerNote">Riot API</span>
     <span class="db-badge off" id="dbBadge" title="SQLite match cache">DB: —</span>
@@ -273,6 +371,12 @@
   </div>
 </header>
 
+<nav class="page-nav">
+  <button class="page-nav-btn active" id="nav-checker"     onclick="showPage('checker')">Checker</button>
+  <button class="page-nav-btn"        id="nav-leaderboard" onclick="showPage('leaderboard')">Leaderboard <span class="lb-count" id="lbCount"></span></button>
+</nav>
+
+<div class="page active" id="page-checker">
 <main>
   <h1>MMR Checker</h1>
   <p class="subtitle">Shows your ranked MMR from current rank, plus estimated normal-queue MMR from lobby averages — all match data cached locally for instant repeat lookups.</p>
@@ -332,6 +436,26 @@
     Ranked MMR is derived from your visible rank, LP, and win rate. Normal-queue MMR is estimated by averaging the ranked MMRs of all 9 players in each lobby — the matchmaker groups players by similar normal MMR, making lobby average the best available proxy. Win-rate fine-tunes both estimates. Riot does not expose raw MMR values.
   </p>
 </main>
+</div>
+
+<div class="page" id="page-leaderboard">
+<main>
+  <h1>Leaderboard</h1>
+  <p class="subtitle">Everyone you've looked up, ranked by estimated MMR. Updates live as you check new players — hit Refresh to re-fetch current ranks for all tracked players.</p>
+  <div class="lb-toolbar">
+    <span class="lb-sort-label">Sort by</span>
+    <div class="lb-sort-btns">
+      <button class="lb-sort-btn active" id="lbsort-normal"  onclick="setLbSort('normal')">Normal MMR</button>
+      <button class="lb-sort-btn"        id="lbsort-ranked"  onclick="setLbSort('ranked')">Ranked MMR</button>
+      <button class="lb-sort-btn"        id="lbsort-wr"      onclick="setLbSort('wr')">Win Rate</button>
+    </div>
+    <button class="lb-refresh-btn" id="lbRefreshBtn" onclick="lbRefreshAll()">
+      <span class="lb-refresh-icon">↻</span> Refresh all
+    </button>
+  </div>
+  <div id="lbContainer"></div>
+</main>
+</div>
 
 <script>
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -409,10 +533,21 @@ let dbAvailable = false;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function estimateMMR(tier, division, lp, wins, losses) {
   const base = TIER_BASE[tier]?.[division] ?? TIER_BASE[tier]?.['I'] ?? 1000;
-  let mmr = base + (lp / 100) * 100;
+  // LP within a division spans ~0-100; scale to ±50 around division midpoint
+  // so 0 LP ≈ base, 100 LP ≈ base+100 (next division boundary)
+  let mmr = base + lp;
   const total = wins + losses;
-  if (total > 0) mmr += ((wins / total) - 0.5) * 100;
-  const confidence = total < 20 ? 150 : total < 50 ? 100 : 75;
+  if (total > 0) {
+    const wr = wins / total;
+    // Sample-weighted nudge: grows with game count but caps at ±150
+    // sqrt scaling prevents a 70% WR over 5 games dominating
+    const sampleWeight = Math.min(1, Math.sqrt(total / 50));
+    mmr += (wr - 0.5) * 300 * sampleWeight;
+  }
+  // Confidence: tighter when more games + LP is mid-division (less ambiguous)
+  const lpCertainty  = 1 - Math.abs(lp - 50) / 50; // 0 at 0/100 LP, 1 at 50 LP
+  const baseConf     = total < 20 ? 150 : total < 50 ? 100 : total < 100 ? 75 : 60;
+  const confidence   = Math.round(baseConf * (1 + 0.4 * (1 - lpCertainty)));
   return { mmr: Math.round(mmr), confidence };
 }
 
@@ -701,8 +836,13 @@ async function estimateNormalMMR(puuid, routing, region) {
     win ? wins++ : losses++;
     const lobbyMMRs = others.map(p => mmrByPuuid.get(p)).filter(v => v !== undefined);
     if (lobbyMMRs.length >= 3) {
-      const avg = lobbyMMRs.reduce((a, b) => a + b, 0) / lobbyMMRs.length;
-      perGameLobbyMMRs.push({ avg, ranked: lobbyMMRs.length, total: others.length });
+      // Top-only trim: only drop the single highest outlier (smurf guard).
+      // Never drop the bottom — if the player is the underdog in lobbies (low WR),
+      // the low-MMR players in the lobby are a real signal, not noise.
+      const sorted = [...lobbyMMRs].sort((a, b) => a - b);
+      const trimmed = sorted.length >= 5 ? sorted.slice(0, -1) : sorted;
+      const avg = trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
+      perGameLobbyMMRs.push({ avg, ranked: trimmed.length, total: others.length });
     }
   }
 
@@ -715,14 +855,26 @@ async function estimateNormalMMR(puuid, routing, region) {
     const weightedSum = perGameLobbyMMRs.reduce((acc, g) => acc + g.avg * g.ranked, 0);
     const weightTotal = perGameLobbyMMRs.reduce((acc, g) => acc + g.ranked, 0);
     const lobbyAvg    = weightedSum / weightTotal;
-    const wrNudge     = (wins / total - 0.5) * 150;
+
+    // WR nudge is a secondary signal — lobby avg is the primary one.
+    // Reduced to ±80 max to avoid overriding a well-sampled lobby avg.
+    const sampleWeight = Math.min(1, Math.sqrt(total / 40));
+    const wrNudge      = (wins / total - 0.5) * 160 * sampleWeight;
     mmr = Math.round(lobbyAvg + wrNudge);
 
+    // Confidence: accounts for game count, ranked ratio, and spread of per-game averages
     const avgRankedRatio = perGameLobbyMMRs.reduce((a, g) => a + g.ranked / g.total, 0) / perGameLobbyMMRs.length;
-    confidence = perGameLobbyMMRs.length < 3  ? 150
-               : avgRankedRatio < 0.4          ? 125
-               : perGameLobbyMMRs.length >= 20 ?  75
-               :                                  100;
+    const mean       = perGameLobbyMMRs.reduce((a, g) => a + g.avg, 0) / perGameLobbyMMRs.length;
+    const variance   = perGameLobbyMMRs.reduce((a, g) => a + (g.avg - mean) ** 2, 0) / perGameLobbyMMRs.length;
+    const stdDev     = Math.sqrt(variance);
+    const spreadPenalty = Math.min(100, Math.round(stdDev * 0.15)); // high spread = wider CI
+
+    const baseConf = perGameLobbyMMRs.length < 3  ? 175
+                   : perGameLobbyMMRs.length < 8   ? 125
+                   : avgRankedRatio < 0.4           ? 110
+                   : perGameLobbyMMRs.length >= 20  ?  65
+                   :                                   90;
+    confidence = baseConf + spreadPenalty;
     method = 'lobby';
   } else {
     mmr = Math.round(1000 + (wins / total - 0.5) * 200);
@@ -887,6 +1039,201 @@ function normalQueueBlock(data) {
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Enter') lookup(); });
+
+// ─── Page nav ─────────────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.page-nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  document.getElementById(`nav-${name}`).classList.add('active');
+  if (name === 'leaderboard') renderLeaderboard();
+}
+
+// ─── Leaderboard data ─────────────────────────────────────────────────────────
+// Each entry: { key, displayName, tag, region, rankedMMR, rankedTier, rankedDiv,
+//               rankedLP, rankedWins, rankedLosses, normalMMR, normalWR,
+//               normalGames, checkedAt, isNew }
+let lbEntries  = JSON.parse(localStorage.getItem('lbEntries') || '[]');
+let lbSort     = 'normal';
+let lbRefreshing = false;
+
+function lbSave() {
+  localStorage.setItem('lbEntries', JSON.stringify(lbEntries));
+  const c = document.getElementById('lbCount');
+  if (c) c.textContent = lbEntries.length ? `(${lbEntries.length})` : '';
+}
+
+function lbUpsert(entry, markNew = false) {
+  const idx = lbEntries.findIndex(e => e.key === entry.key);
+  if (idx !== -1) {
+    lbEntries[idx] = { ...lbEntries[idx], ...entry, isNew: markNew };
+  } else {
+    lbEntries.unshift({ ...entry, isNew: markNew });
+  }
+  lbSave();
+}
+
+function lbDelete(key) {
+  lbEntries = lbEntries.filter(e => e.key !== key);
+  lbSave();
+  renderLeaderboard();
+}
+
+function setLbSort(s) {
+  lbSort = s;
+  document.querySelectorAll('.lb-sort-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`lbsort-${s}`).classList.add('active');
+  renderLeaderboard();
+}
+
+function lbSorted() {
+  return [...lbEntries].sort((a, b) => {
+    if (lbSort === 'normal')  return (b.normalMMR  ?? -1) - (a.normalMMR  ?? -1);
+    if (lbSort === 'ranked')  return (b.rankedMMR  ?? -1) - (a.rankedMMR  ?? -1);
+    if (lbSort === 'wr')      return (b.normalWR   ?? -1) - (a.normalWR   ?? -1);
+    return 0;
+  });
+}
+
+function renderLeaderboard() {
+  const c = document.getElementById('lbContainer');
+  if (!c) return;
+
+  if (!lbEntries.length) {
+    c.innerHTML = `<div class="lb-empty"><strong>No players tracked yet</strong>Look someone up on the Checker tab — they'll appear here automatically.</div>`;
+    return;
+  }
+
+  const sorted = lbSorted();
+  const rows = sorted.map((e, i) => {
+    const pos     = i + 1;
+    const posCls  = pos === 1 ? 'medal-1' : pos === 2 ? 'medal-2' : pos === 3 ? 'medal-3' : '';
+    const posStr  = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
+
+    const nLabel  = e.normalMMR != null ? mmrToTierLabel(e.normalMMR) : null;
+    const rLabel  = e.rankedMMR != null ? mmrToTierLabel(e.rankedMMR) : null;
+
+    const nCell   = e.normalMMR != null
+      ? `<div class="lb-mmr-val">${e.normalMMR}</div><div class="lb-mmr-tier ${nLabel.cls}">${nLabel.label}</div>`
+      : `<div class="lb-mmr-val" style="color:var(--text-light)">—</div>`;
+
+    const rCell   = e.rankedMMR != null
+      ? `<div class="lb-mmr-val">${e.rankedMMR}</div><div class="lb-mmr-tier ${rLabel.cls}">${rLabel.label}</div>`
+      : `<div class="lb-mmr-val" style="color:var(--text-light)">—</div><div class="lb-mmr-tier">Unranked</div>`;
+
+    const wrStr   = e.normalWR != null ? `<span class="${wrClass(e.normalWR)}">${e.normalWR}%</span>` : '—';
+
+    return `<div class="lb-row${e.isNew ? ' lb-new' : ''}" data-key="${esc(e.key)}">
+      <div class="lb-pos ${posCls}">${posStr}</div>
+      <div class="lb-name-wrap">
+        <div class="lb-name">
+          ${esc(e.displayName)}<span class="lb-name-tag">#${esc(e.tag)}</span>
+          <span class="lb-region">${e.region.toUpperCase()}</span>
+        </div>
+      </div>
+      <div class="lb-mmr-cell">${nCell}</div>
+      <div class="lb-mmr-cell">${rCell}</div>
+      <div class="lb-wr">${wrStr}</div>
+      <button class="lb-del" onclick="lbDelete('${esc(e.key)}')" title="Remove">×</button>
+    </div>`;
+  }).join('');
+
+  c.innerHTML = `<div class="lb-table">
+    <div class="lb-header-row">
+      <span>#</span><span>Player</span><span>Normal MMR</span><span>Ranked MMR</span><span>WR</span><span></span>
+    </div>
+    ${rows}
+  </div>`;
+
+  // Clear isNew flags after render so pulse only fires once
+  lbEntries.forEach(e => { e.isNew = false; });
+  lbSave();
+}
+
+// ─── Refresh all leaderboard players ─────────────────────────────────────────
+async function lbRefreshAll() {
+  if (lbRefreshing || !lbEntries.length) return;
+  lbRefreshing = true;
+  const btn = document.getElementById('lbRefreshBtn');
+  btn.classList.add('spinning');
+  btn.disabled = true;
+
+  for (const entry of lbEntries) {
+    try {
+      const routing = ROUTING[entry.region] || 'americas';
+      const apiEntries = await riotFetch(
+        `https://${entry.region}.api.riotgames.com/lol/league/v4/entries/by-puuid/${entry.puuid}`
+      );
+      const solo = apiEntries.find(e => e.queueType === 'RANKED_SOLO_5x5');
+      const flex = apiEntries.find(e => e.queueType === 'RANKED_FLEX_SR');
+      const best = solo || flex;
+      if (best) {
+        const { mmr } = estimateMMR(best.tier, best.rank, best.leaguePoints, best.wins, best.losses);
+        entry.rankedMMR  = mmr;
+        entry.rankedTier = best.tier;
+      } else {
+        entry.rankedMMR = null;
+      }
+    } catch { /* skip on error */ }
+  }
+
+  lbSave();
+  renderLeaderboard();
+  lbRefreshing = false;
+  btn.classList.remove('spinning');
+  btn.disabled = false;
+}
+
+// ─── Hook into lookup to feed the leaderboard ─────────────────────────────────
+// Wrap renderResults to also upsert into lb
+const _origRenderResults = renderResults;
+window.renderResults = function(displayName, tag, region, entries, normalData) {
+  _origRenderResults(displayName, tag, region, entries, normalData);
+
+  const solo = entries.find(e => e.queueType === 'RANKED_SOLO_5x5');
+  const flex = entries.find(e => e.queueType === 'RANKED_FLEX_SR');
+  const best = solo || flex;
+  const rankedMMR = best ? estimateMMR(best.tier, best.rank, best.leaguePoints, best.wins, best.losses).mmr : null;
+
+  lbUpsert({
+    key:         `${displayName}#${tag}@${region}`,
+    puuid:       window._lastLookupPuuid ?? '',
+    displayName, tag, region,
+    rankedMMR,
+    rankedTier:  best?.tier ?? null,
+    normalMMR:   normalData?.mmr   ?? null,
+    normalWR:    normalData?.wr    ?? null,
+    normalGames: normalData?.total ?? 0,
+    checkedAt:   Date.now(),
+  }, true);
+
+  const c = document.getElementById('lbCount');
+  if (c) c.textContent = lbEntries.length ? `(${lbEntries.length})` : '';
+};
+
+// Store puuid so the leaderboard refresh can re-fetch ranks
+const _origLookup = lookup;
+window.lookup = async function() {
+  window._lastLookupPuuid = '';
+  await _origLookup();
+};
+
+// Patch inside lookup to capture puuid — we intercept after account resolution
+// by wrapping riotFetch responses for account endpoints
+const _origRiotFetch = riotFetch;
+window.riotFetch = async function(url) {
+  const data = await _origRiotFetch(url);
+  if (data?.puuid && url.includes('/accounts/by-riot-id/')) {
+    window._lastLookupPuuid = data.puuid;
+  }
+  return data;
+};
+
+// Init lb count badge on load
+(function() {
+  const c = document.getElementById('lbCount');
+  if (c && lbEntries.length) c.textContent = `(${lbEntries.length})`;
+})();
 </script>
 </body>
 </html>
