@@ -347,6 +347,130 @@
     .page-nav { padding: 0 14px; }
     .lb-header-row, .lb-row { grid-template-columns: 28px 1fr 90px 80px 34px; }
   }
+
+  /* ── Lore page ── */
+  .lore-toolbar {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .lore-filter-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .lore-filter-btn {
+    padding: 5px 12px; font-size: 12px; font-weight: 500;
+    border: 1px solid var(--border); border-radius: 20px;
+    background: var(--surface2); color: var(--text-mid); cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .lore-filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .lore-filter-btn:hover:not(.active) { background: var(--border); color: var(--text); }
+
+  .lore-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+  }
+  .lore-loading {
+    grid-column: 1/-1; display: flex; align-items: center; gap: 10px;
+    padding: 48px; justify-content: center; color: var(--text-mid); font-size: 13px;
+  }
+
+  .lore-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden; cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+    display: flex; flex-direction: column;
+  }
+  .lore-card:hover {
+    border-color: var(--accent); transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  }
+  .lore-card-img {
+    width: 100%; aspect-ratio: 1; object-fit: cover;
+    background: var(--surface2);
+    display: block;
+  }
+  .lore-card-info {
+    padding: 9px 10px 10px; flex: 1;
+  }
+  .lore-card-name {
+    font-size: 13px; font-weight: 600; letter-spacing: -0.01em;
+    line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .lore-card-title {
+    font-size: 11px; color: var(--text-mid); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .lore-card-tags {
+    display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px;
+  }
+  .lore-tag {
+    font-size: 10px; padding: 1px 6px; border-radius: 3px;
+    background: var(--accent-light); color: var(--accent);
+    border: 1px solid rgba(79,127,255,0.2); white-space: nowrap;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ── Lore modal ── */
+  .lore-modal-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .lore-modal-backdrop.open { display: flex; }
+  .lore-modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; max-width: 640px; width: 100%;
+    max-height: 88vh; overflow: hidden;
+    display: flex; flex-direction: column;
+    animation: modalIn 0.18s ease;
+  }
+  @keyframes modalIn { from { opacity:0; transform: scale(0.96) translateY(8px); } to { opacity:1; transform: none; } }
+  .lore-modal-close {
+    position: absolute; top: 14px; right: 16px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text-mid); font-size: 18px; line-height: 1;
+    width: 30px; height: 30px; border-radius: 6px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.15s, background 0.15s; z-index: 1;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .lore-modal-close:hover { color: var(--text); background: var(--border); }
+  .lore-modal-splash {
+    width: 100%; height: 220px; flex-shrink: 0;
+    background: var(--surface2) center/cover no-repeat;
+    position: relative;
+  }
+  .lore-modal-splash::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 30%, var(--surface) 100%);
+  }
+  .lore-modal-body {
+    padding: 0 26px 26px; overflow-y: auto; position: relative;
+  }
+  .lore-modal-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; margin-bottom: 14px;
+  }
+  .lore-modal-name {
+    font-size: 24px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1;
+  }
+  .lore-modal-title { font-size: 14px; color: var(--text-mid); margin-top: 3px; }
+  .lore-modal-tag {
+    font-size: 11px; font-family: 'DM Mono', monospace;
+    color: var(--accent); background: var(--accent-light);
+    border: 1px solid rgba(79,127,255,0.25);
+    padding: 3px 10px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+    margin-top: 4px;
+  }
+  .lore-modal-lore {
+    font-size: 14px; line-height: 1.75; color: var(--text-mid);
+  }
+  @media (max-width: 500px) {
+    .lore-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+    .lore-modal-splash { height: 150px; }
+    .lore-modal-body { padding: 0 16px 20px; }
+    .lore-modal-name { font-size: 20px; }
+  }
 </style>
 </head>
 <body>
@@ -374,6 +498,7 @@
 <nav class="page-nav">
   <button class="page-nav-btn active" id="nav-checker"     onclick="showPage('checker')">Checker</button>
   <button class="page-nav-btn"        id="nav-leaderboard" onclick="showPage('leaderboard')">Leaderboard <span class="lb-count" id="lbCount"></span></button>
+  <button class="page-nav-btn"        id="nav-lore"        onclick="showPage('lore')">Champion Lore</button>
 </nav>
 
 <div class="page active" id="page-checker">
@@ -455,6 +580,40 @@
   </div>
   <div id="lbContainer"></div>
 </main>
+</div>
+
+<div class="page" id="page-lore">
+<main style="max-width:1100px">
+  <h1>Champion Lore</h1>
+  <p class="subtitle">Browse every champion in League of Legends. Click a card to read their full lore.</p>
+
+  <div class="lore-toolbar">
+    <input type="text" id="loreSearch" placeholder="Search champions…" oninput="filterLore()" style="margin-bottom:0;max-width:280px">
+    <div class="lore-filter-btns" id="loreFilters"></div>
+  </div>
+
+  <div id="loreGrid" class="lore-grid">
+    <div class="lore-loading"><div class="spinner"></div> Loading champions…</div>
+  </div>
+</main>
+</div>
+
+<!-- Lore modal -->
+<div id="loreModal" class="lore-modal-backdrop" onclick="closeLoreModal(event)">
+  <div class="lore-modal">
+    <button class="lore-modal-close" onclick="closeLoreModal()">×</button>
+    <div class="lore-modal-splash" id="loreModalSplash"></div>
+    <div class="lore-modal-body">
+      <div class="lore-modal-header">
+        <div>
+          <div class="lore-modal-name" id="loreModalName"></div>
+          <div class="lore-modal-title" id="loreModalTitle"></div>
+        </div>
+        <span class="lore-modal-tag" id="loreModalTag"></span>
+      </div>
+      <div class="lore-modal-lore" id="loreModalLore"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1038,7 +1197,129 @@ function normalQueueBlock(data) {
     </div>`;
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Enter') lookup(); });
+// ─── Champion Lore ─────────────────────────────────────────────────────────────
+let loreData       = null; // { [id]: { name, title, blurb, lore, tags, image } }
+let loreVersion    = null;
+let loreInited     = false;
+let loreActiveTag  = 'All';
+
+async function initLore() {
+  if (loreInited) return;
+  loreInited = true;
+
+  try {
+    // Get latest Data Dragon version
+    const verRes  = await fetch('https://ddragon.leagueoflegends.com/api/versions.json');
+    const versions = await verRes.json();
+    loreVersion = versions[0];
+
+    // Fetch champion summary (all champions, lightweight)
+    const champRes = await fetch(`https://ddragon.leagueoflegends.com/cdn/${loreVersion}/data/en_US/champion.json`);
+    const champJson = await champRes.json();
+
+    loreData = {};
+    for (const [id, champ] of Object.entries(champJson.data)) {
+      loreData[id] = {
+        id,
+        name:   champ.name,
+        title:  champ.title,
+        blurb:  champ.blurb,
+        tags:   champ.tags,
+        image:  `https://ddragon.leagueoflegends.com/cdn/${loreVersion}/img/champion/${champ.image.full}`,
+        splash: `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${id}_0.jpg`,
+      };
+    }
+
+    buildLoreFilters();
+    renderLoreGrid();
+  } catch (err) {
+    document.getElementById('loreGrid').innerHTML =
+      `<div class="lore-loading" style="color:var(--warn)">Failed to load champion data. Check your connection.</div>`;
+  }
+}
+
+function buildLoreFilters() {
+  const tagSet = new Set(['All']);
+  for (const c of Object.values(loreData)) c.tags.forEach(t => tagSet.add(t));
+
+  const container = document.getElementById('loreFilters');
+  container.innerHTML = [...tagSet].map(tag =>
+    `<button class="lore-filter-btn${tag === 'All' ? ' active' : ''}" onclick="setLoreTag('${tag}')">${tag}</button>`
+  ).join('');
+}
+
+function setLoreTag(tag) {
+  loreActiveTag = tag;
+  document.querySelectorAll('.lore-filter-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === tag);
+  });
+  renderLoreGrid();
+}
+
+function filterLore() {
+  renderLoreGrid();
+}
+
+function renderLoreGrid() {
+  const grid    = document.getElementById('loreGrid');
+  const query   = (document.getElementById('loreSearch')?.value || '').toLowerCase().trim();
+  const entries = Object.values(loreData).filter(c => {
+    const tagOk   = loreActiveTag === 'All' || c.tags.includes(loreActiveTag);
+    const queryOk = !query || c.name.toLowerCase().includes(query) || c.title.toLowerCase().includes(query);
+    return tagOk && queryOk;
+  }).sort((a, b) => a.name.localeCompare(b.name));
+
+  if (!entries.length) {
+    grid.innerHTML = `<div class="lore-loading" style="color:var(--text-light)">No champions match your search.</div>`;
+    return;
+  }
+
+  grid.innerHTML = entries.map(c => `
+    <div class="lore-card" onclick="openLoreModal('${esc(c.id)}')" title="${esc(c.name)}">
+      <img class="lore-card-img" src="${c.image}" alt="${esc(c.name)}" loading="lazy">
+      <div class="lore-card-info">
+        <div class="lore-card-name">${esc(c.name)}</div>
+        <div class="lore-card-title">${esc(c.title)}</div>
+        <div class="lore-card-tags">${c.tags.map(t => `<span class="lore-tag">${t}</span>`).join('')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function openLoreModal(id) {
+  const c = loreData[id];
+  if (!c) return;
+
+  // Set immediate info from summary data
+  document.getElementById('loreModalSplash').style.backgroundImage = `url('${c.splash}')`;
+  document.getElementById('loreModalName').textContent  = c.name;
+  document.getElementById('loreModalTitle').textContent = c.title;
+  document.getElementById('loreModalTag').textContent   = c.tags.join(' · ');
+  document.getElementById('loreModalLore').textContent  = c.blurb + ' Loading full lore…';
+  document.getElementById('loreModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Fetch full lore from individual champion endpoint
+  try {
+    const res  = await fetch(`https://ddragon.leagueoflegends.com/cdn/${loreVersion}/data/en_US/champion/${id}.json`);
+    const json = await res.json();
+    const full = json.data[id];
+    document.getElementById('loreModalLore').textContent = full.lore || full.blurb || c.blurb;
+  } catch {
+    document.getElementById('loreModalLore').textContent = c.blurb;
+  }
+}
+
+function closeLoreModal(e) {
+  if (e && e.target !== document.getElementById('loreModal')) return;
+  document.getElementById('loreModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLoreModal();
+  if (e.key === 'Enter' && !document.getElementById('loreModal').classList.contains('open')) lookup();
+});
 
 // ─── Page nav ─────────────────────────────────────────────────────────────────
 function showPage(name) {
@@ -1047,6 +1328,7 @@ function showPage(name) {
   document.getElementById(`page-${name}`).classList.add('active');
   document.getElementById(`nav-${name}`).classList.add('active');
   if (name === 'leaderboard') renderLeaderboard();
+  if (name === 'lore') initLore();
 }
 
 // ─── Leaderboard data ─────────────────────────────────────────────────────────
