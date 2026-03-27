@@ -294,15 +294,18 @@
     font-family: 'DM Sans', sans-serif; transition: all 0.15s;
   }
   .lb-sort-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .lb-refresh-btn {
-    margin-left: auto; padding: 5px 14px; font-size: 12px; font-weight: 500;
-    border: 1px solid var(--border); border-radius: 5px;
-    background: var(--surface2); color: var(--text-mid); cursor: pointer;
-    font-family: 'DM Sans', sans-serif; transition: all 0.15s;
-    display: flex; align-items: center; gap: 6px;
+  .lb-live-dot {
+    margin-left: auto; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--success); flex-shrink: 0;
+    box-shadow: 0 0 0 0 rgba(46,168,118,0.5);
+    animation: livePulse 2.5s ease-out infinite;
   }
-  .lb-refresh-btn:hover { background: var(--border); color: var(--text); }
-  .lb-refresh-btn.spinning .lb-refresh-icon { animation: spin 0.7s linear infinite; display: inline-block; }
+  .lb-live-dot.disconnected { background: var(--text-light); animation: none; box-shadow: none; }
+  @keyframes livePulse {
+    0%   { box-shadow: 0 0 0 0 rgba(46,168,118,0.5); }
+    70%  { box-shadow: 0 0 0 7px rgba(46,168,118,0); }
+    100% { box-shadow: 0 0 0 0 rgba(46,168,118,0); }
+  }
   .lb-empty {
     text-align: center; padding: 48px 24px;
     color: var(--text-light); font-size: 13px; line-height: 1.7;
@@ -566,7 +569,7 @@
 <div class="page" id="page-leaderboard">
 <main>
   <h1>Leaderboard</h1>
-  <p class="subtitle">Everyone you've looked up, ranked by estimated MMR. Updates live as you check new players — hit Refresh to re-fetch current ranks for all tracked players.</p>
+  <p class="subtitle">Global rankings — everyone looked up on this site, live across all visitors. Updates instantly when anyone runs a lookup.</p>
   <div class="lb-toolbar">
     <span class="lb-sort-label">Sort by</span>
     <div class="lb-sort-btns">
@@ -574,9 +577,7 @@
       <button class="lb-sort-btn"        id="lbsort-ranked"  onclick="setLbSort('ranked')">Ranked MMR</button>
       <button class="lb-sort-btn"        id="lbsort-wr"      onclick="setLbSort('wr')">Win Rate</button>
     </div>
-    <button class="lb-refresh-btn" id="lbRefreshBtn" onclick="lbRefreshAll()">
-      <span class="lb-refresh-icon">↻</span> Refresh all
-    </button>
+    <span class="lb-live-dot" id="lbLiveDot" title="Live — updates automatically"></span>
   </div>
   <div id="lbContainer"></div>
 </main>
@@ -944,17 +945,17 @@ async function estimateNormalMMR(puuid, routing, region) {
   }
 
   // ── Wave 2: rank lookups, DB-cached ──────────────────────────────────────────
+  // Approach: for each game, average the MMR of ranked lobby players (unranked excluded),
+  // then average those per-game averages. Simple, transparent, no inference needed.
   const puuidList = [...allOtherPuuids];
   setLoading(true, `Looking up ${puuidList.length} players…`, 0, puuidList.length);
 
-  // Bulk-check DB first
   const cachedRanks = await dbGetRanks(puuidList);
-  const mmrByPuuid  = new Map();
+  const mmrByPuuid  = new Map(); // puuid → mmr (ranked only)
   const toFetchRanks = [];
 
   for (const p of puuidList) {
     if (Object.prototype.hasOwnProperty.call(cachedRanks, p)) {
-      // null means confirmed unranked — still valid cache hit
       if (cachedRanks[p] !== null) mmrByPuuid.set(p, cachedRanks[p]);
       tickProgress(`Players: ${_progressDone}/${puuidList.length} (cached)`);
     } else {
@@ -962,7 +963,6 @@ async function estimateNormalMMR(puuid, routing, region) {
     }
   }
 
-  // Fetch uncached ranks in parallel chunks
   const RANK_CHUNK = 100;
   const newRankRows = [];
 
@@ -978,72 +978,78 @@ async function estimateNormalMMR(puuid, routing, region) {
             const best = solo || flex;
             const mmr  = best ? estimateMMR(best.tier, best.rank, best.leaguePoints, best.wins, best.losses).mmr : null;
             if (mmr !== null) mmrByPuuid.set(p, mmr);
-            newRankRows.push({ puuid: p, mmr }); // null = confirmed unranked, still cache it
+            newRankRows.push({ puuid: p, mmr });
           })
-          .catch(() => { tickProgress(`Players: ${_progressDone}/${puuidList.length}`); })
+          .catch(() => {
+            tickProgress(`Players: ${_progressDone}/${puuidList.length}`);
+            newRankRows.push({ puuid: p, mmr: null });
+          })
       )
     );
   }
 
   await dbStoreRanks(newRankRows);
 
-  // ── Aggregate ──────────────────────────────────────────────────────────────────
-  let wins = 0, losses = 0;
+  // ── Aggregate ─────────────────────────────────────────────────────────────────
+  // Per game: average MMR of ranked players only (unranked skipped, not estimated).
+  // Need ≥3 ranked players in a game to include it.
+  // Smurf guard: drop single highest MMR when ≥5 ranked players present.
+  // Final estimate: average of per-game lobby MMRs + WR nudge.
+  let wins = 0, losses = 0, analysedWins = 0, analysedLosses = 0;
   const perGameLobbyMMRs = [];
 
   for (const { others, win } of validMatches) {
     win ? wins++ : losses++;
-    const lobbyMMRs = others.map(p => mmrByPuuid.get(p)).filter(v => v !== undefined);
-    if (lobbyMMRs.length >= 3) {
-      // Top-only trim: only drop the single highest outlier (smurf guard).
-      // Never drop the bottom — if the player is the underdog in lobbies (low WR),
-      // the low-MMR players in the lobby are a real signal, not noise.
-      const sorted = [...lobbyMMRs].sort((a, b) => a - b);
-      const trimmed = sorted.length >= 5 ? sorted.slice(0, -1) : sorted;
-      const avg = trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
-      perGameLobbyMMRs.push({ avg, ranked: trimmed.length, total: others.length });
-    }
+    const rankedMMRs = others.map(p => mmrByPuuid.get(p)).filter(v => v !== undefined);
+    if (rankedMMRs.length < 3) continue;
+    win ? analysedWins++ : analysedLosses++;
+    const sorted  = [...rankedMMRs].sort((a, b) => a - b);
+    const trimmed = sorted.length >= 5 ? sorted.slice(0, -1) : sorted;
+    const avg     = trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
+    perGameLobbyMMRs.push({ avg, rankedCount: rankedMMRs.length, totalOthers: others.length });
   }
 
   const total = wins + losses;
   if (total === 0) return null;
 
   let mmr, confidence, method;
+  const analysedTotal = analysedWins + analysedLosses;
+  const analysedWR    = analysedTotal > 0 ? Math.round((analysedWins / analysedTotal) * 100) : Math.round((wins / total) * 100);
 
   if (perGameLobbyMMRs.length >= 1) {
-    const weightedSum = perGameLobbyMMRs.reduce((acc, g) => acc + g.avg * g.ranked, 0);
-    const weightTotal = perGameLobbyMMRs.reduce((acc, g) => acc + g.ranked, 0);
-    const lobbyAvg    = weightedSum / weightTotal;
-
-    // WR nudge is a secondary signal — lobby avg is the primary one.
-    // Reduced to ±80 max to avoid overriding a well-sampled lobby avg.
-    const sampleWeight = Math.min(1, Math.sqrt(total / 40));
-    const wrNudge      = (wins / total - 0.5) * 160 * sampleWeight;
+    // Simple unweighted average: every game counts equally
+    const lobbyAvg     = perGameLobbyMMRs.reduce((acc, g) => acc + g.avg, 0) / perGameLobbyMMRs.length;
+    const sampleWeight = Math.min(1, Math.sqrt(analysedTotal / 40));
+    const wrNudge      = analysedTotal > 0
+      ? (analysedWins / analysedTotal - 0.5) * 400 * sampleWeight
+      : 0;
     mmr = Math.round(lobbyAvg + wrNudge);
 
-    // Confidence: accounts for game count, ranked ratio, and spread of per-game averages
-    const avgRankedRatio = perGameLobbyMMRs.reduce((a, g) => a + g.ranked / g.total, 0) / perGameLobbyMMRs.length;
-    const mean       = perGameLobbyMMRs.reduce((a, g) => a + g.avg, 0) / perGameLobbyMMRs.length;
-    const variance   = perGameLobbyMMRs.reduce((a, g) => a + (g.avg - mean) ** 2, 0) / perGameLobbyMMRs.length;
-    const stdDev     = Math.sqrt(variance);
-    const spreadPenalty = Math.min(100, Math.round(stdDev * 0.15)); // high spread = wider CI
-
-    const baseConf = perGameLobbyMMRs.length < 3  ? 175
-                   : perGameLobbyMMRs.length < 8   ? 125
-                   : avgRankedRatio < 0.4           ? 110
-                   : perGameLobbyMMRs.length >= 20  ?  65
-                   :                                   90;
+    const avgCoverage   = perGameLobbyMMRs.reduce((a, g) => a + g.rankedCount / g.totalOthers, 0) / perGameLobbyMMRs.length;
+    const mean          = lobbyAvg;
+    const variance      = perGameLobbyMMRs.reduce((a, g) => a + (g.avg - mean) ** 2, 0) / perGameLobbyMMRs.length;
+    const spreadPenalty = Math.min(80, Math.round(Math.sqrt(variance) * 0.12));
+    const baseConf      = perGameLobbyMMRs.length < 3 ? 175
+                        : perGameLobbyMMRs.length < 8 ? 125
+                        : avgCoverage < 0.4            ? 110
+                        : perGameLobbyMMRs.length >= 20 ? 60
+                        :                                 85;
     confidence = baseConf + spreadPenalty;
     method = 'lobby';
-  } else {
-    mmr = Math.round(1000 + (wins / total - 0.5) * 200);
-    confidence = 200;
-    method = 'winrate';
+
+    const perGameDebug = perGameLobbyMMRs.map(g => Math.round(g.avg));
+    return { wins: analysedWins, losses: analysedLosses, total, wr: analysedWR,
+             mmr, confidence, method, mode, gamesAnalysed: perGameLobbyMMRs.length, fromCache,
+             debug: { lobbyAvg: Math.round(lobbyAvg), wrNudge: Math.round(wrNudge),
+                      rankedCount: mmrByPuuid.size, perGameDebug } };
   }
 
-  const wr = Math.round((wins / total) * 100);
-  return { wins, losses, total, wr, mmr, confidence, method, mode,
-           gamesAnalysed: perGameLobbyMMRs.length, fromCache };
+  // Fallback: no games had ≥3 ranked players
+  mmr = Math.round(1000 + (analysedWins / Math.max(analysedTotal, 1) - 0.5) * 200);
+  confidence = 200;
+  method = 'winrate';
+  return { wins: analysedWins, losses: analysedLosses, total, wr: analysedWR,
+           mmr, confidence, method, mode, gamesAnalysed: 0, fromCache, debug: null };
 }
 
 // ─── Lookup entry point ────────────────────────────────────────────────────────
@@ -1117,7 +1123,7 @@ function renderResults(displayName, tag, region, entries, normalData) {
       ${queueBlock('Ranked Solo / Duo', solo)}
       ${normalQueueBlock(normalData)}
       <div class="info-footer">
-        Ranked MMR: derived from tier, division, LP, and win rate. Normal MMR: weighted average of lobby ranked MMRs across ${normalData?.total ?? 0} normal games, win-rate adjusted. Match data is cached in SQLite and reused on future lookups — only new games are fetched. Cache wipes automatically each season. Riot does not expose raw MMR.
+        Ranked MMR: derived from tier, division, LP, and win rate. Normal MMR: weighted average of lobby MMRs across ${normalData?.total ?? 0} normal games, win-rate adjusted. Unranked lobby players get an inferred MMR from their observed normal-game win rate (Bayesian-smoothed, half-weighted vs confirmed ranked players). Wins/Losses/WR reflect the analysed subset; Total shows full match history. Match data is cached in SQLite — only new games are fetched each run. Cache wipes each season. Riot does not expose raw MMR.
       </div>
     </div>`;
 
@@ -1166,6 +1172,7 @@ function normalQueueBlock(data) {
   if (!data) return `<div class="queue-block"><div class="queue-name">Normal (Draft / Blind)</div><div class="unranked-note">No normal games found.</div></div>`;
 
   const { wins, losses, total, wr, mmr, confidence, method, mode, gamesAnalysed } = data;
+  const analysedTotal = wins + losses; // wins/losses are already the analysed subset
   const { label, cls } = mmrToTierLabel(mmr);
   const symbol = RANK_SYMBOLS[label.toUpperCase()] || '?';
   const methodNote = method === 'lobby'
@@ -1191,7 +1198,8 @@ function normalQueueBlock(data) {
         <div class="stat"><span class="stat-val">${wins}</span><span class="stat-lbl">Wins</span></div>
         <div class="stat"><span class="stat-val">${losses}</span><span class="stat-lbl">Losses</span></div>
         <div class="stat"><span class="stat-val ${wrClass(wr)}">${wr}%</span><span class="stat-lbl">Win Rate</span></div>
-        <div class="stat"><span class="stat-val">${total}</span><span class="stat-lbl">Games</span></div>
+        <div class="stat"><span class="stat-val">${analysedTotal}</span><span class="stat-lbl">Analysed</span></div>
+        ${analysedTotal !== total ? `<div class="stat"><span class="stat-val" style="color:var(--text-light)">${total}</span><span class="stat-lbl">Total</span></div>` : ''}
       </div>
       <div class="win-bar"><div class="win-bar-fill" style="width:${wr}%;background:${wrColor(wr)}"></div></div>
     </div>`;
@@ -1331,36 +1339,14 @@ function showPage(name) {
   if (name === 'lore') initLore();
 }
 
-// ─── Leaderboard data ─────────────────────────────────────────────────────────
-// Each entry: { key, displayName, tag, region, rankedMMR, rankedTier, rankedDiv,
-//               rankedLP, rankedWins, rankedLosses, normalMMR, normalWR,
-//               normalGames, checkedAt, isNew }
-let lbEntries  = JSON.parse(localStorage.getItem('lbEntries') || '[]');
-let lbSort     = 'normal';
-let lbRefreshing = false;
+// ─── Global Leaderboard ───────────────────────────────────────────────────────
+// Data lives on the server (SQLite). All visitors see the same list.
+// Updates are pushed via SSE — no polling, no refresh button.
 
-function lbSave() {
-  localStorage.setItem('lbEntries', JSON.stringify(lbEntries));
-  const c = document.getElementById('lbCount');
-  if (c) c.textContent = lbEntries.length ? `(${lbEntries.length})` : '';
-}
+let lbEntries = [];   // local mirror of server state, set by SSE
+let lbSort    = 'normal';
 
-function lbUpsert(entry, markNew = false) {
-  const idx = lbEntries.findIndex(e => e.key === entry.key);
-  if (idx !== -1) {
-    lbEntries[idx] = { ...lbEntries[idx], ...entry, isNew: markNew };
-  } else {
-    lbEntries.unshift({ ...entry, isNew: markNew });
-  }
-  lbSave();
-}
-
-function lbDelete(key) {
-  lbEntries = lbEntries.filter(e => e.key !== key);
-  lbSave();
-  renderLeaderboard();
-}
-
+// ── Sorting ───────────────────────────────────────────────────────────────────
 function setLbSort(s) {
   lbSort = s;
   document.querySelectorAll('.lb-sort-btn').forEach(b => b.classList.remove('active'));
@@ -1370,16 +1356,20 @@ function setLbSort(s) {
 
 function lbSorted() {
   return [...lbEntries].sort((a, b) => {
-    if (lbSort === 'normal')  return (b.normalMMR  ?? -1) - (a.normalMMR  ?? -1);
-    if (lbSort === 'ranked')  return (b.rankedMMR  ?? -1) - (a.rankedMMR  ?? -1);
-    if (lbSort === 'wr')      return (b.normalWR   ?? -1) - (a.normalWR   ?? -1);
+    if (lbSort === 'normal') return (b.normalMMR ?? -1) - (a.normalMMR ?? -1);
+    if (lbSort === 'ranked') return (b.rankedMMR ?? -1) - (a.rankedMMR ?? -1);
+    if (lbSort === 'wr')     return (b.normalWR  ?? -1) - (a.normalWR  ?? -1);
     return 0;
   });
 }
 
-function renderLeaderboard() {
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderLeaderboard(newKey) {
   const c = document.getElementById('lbContainer');
   if (!c) return;
+
+  const count = document.getElementById('lbCount');
+  if (count) count.textContent = lbEntries.length ? `(${lbEntries.length})` : '';
 
   if (!lbEntries.length) {
     c.innerHTML = `<div class="lb-empty"><strong>No players tracked yet</strong>Look someone up on the Checker tab — they'll appear here automatically.</div>`;
@@ -1388,24 +1378,25 @@ function renderLeaderboard() {
 
   const sorted = lbSorted();
   const rows = sorted.map((e, i) => {
-    const pos     = i + 1;
-    const posCls  = pos === 1 ? 'medal-1' : pos === 2 ? 'medal-2' : pos === 3 ? 'medal-3' : '';
-    const posStr  = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
+    const pos    = i + 1;
+    const posCls = pos === 1 ? 'medal-1' : pos === 2 ? 'medal-2' : pos === 3 ? 'medal-3' : '';
+    const posStr = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
+    const isNew  = newKey && e.key === newKey;
 
-    const nLabel  = e.normalMMR != null ? mmrToTierLabel(e.normalMMR) : null;
-    const rLabel  = e.rankedMMR != null ? mmrToTierLabel(e.rankedMMR) : null;
+    const nLabel = e.normalMMR != null ? mmrToTierLabel(e.normalMMR) : null;
+    const rLabel = e.rankedMMR != null ? mmrToTierLabel(e.rankedMMR) : null;
 
-    const nCell   = e.normalMMR != null
+    const nCell = e.normalMMR != null
       ? `<div class="lb-mmr-val">${e.normalMMR}</div><div class="lb-mmr-tier ${nLabel.cls}">${nLabel.label}</div>`
       : `<div class="lb-mmr-val" style="color:var(--text-light)">—</div>`;
 
-    const rCell   = e.rankedMMR != null
+    const rCell = e.rankedMMR != null
       ? `<div class="lb-mmr-val">${e.rankedMMR}</div><div class="lb-mmr-tier ${rLabel.cls}">${rLabel.label}</div>`
       : `<div class="lb-mmr-val" style="color:var(--text-light)">—</div><div class="lb-mmr-tier">Unranked</div>`;
 
-    const wrStr   = e.normalWR != null ? `<span class="${wrClass(e.normalWR)}">${e.normalWR}%</span>` : '—';
+    const wrStr = e.normalWR != null ? `<span class="${wrClass(e.normalWR)}">${e.normalWR}%</span>` : '—';
 
-    return `<div class="lb-row${e.isNew ? ' lb-new' : ''}" data-key="${esc(e.key)}">
+    return `<div class="lb-row${isNew ? ' lb-new' : ''}" data-key="${esc(e.key)}">
       <div class="lb-pos ${posCls}">${posStr}</div>
       <div class="lb-name-wrap">
         <div class="lb-name">
@@ -1426,48 +1417,58 @@ function renderLeaderboard() {
     </div>
     ${rows}
   </div>`;
-
-  // Clear isNew flags after render so pulse only fires once
-  lbEntries.forEach(e => { e.isNew = false; });
-  lbSave();
 }
 
-// ─── Refresh all leaderboard players ─────────────────────────────────────────
-async function lbRefreshAll() {
-  if (lbRefreshing || !lbEntries.length) return;
-  lbRefreshing = true;
-  const btn = document.getElementById('lbRefreshBtn');
-  btn.classList.add('spinning');
-  btn.disabled = true;
-
-  for (const entry of lbEntries) {
-    try {
-      const routing = ROUTING[entry.region] || 'americas';
-      const apiEntries = await riotFetch(
-        `https://${entry.region}.api.riotgames.com/lol/league/v4/entries/by-puuid/${entry.puuid}`
-      );
-      const solo = apiEntries.find(e => e.queueType === 'RANKED_SOLO_5x5');
-      const flex = apiEntries.find(e => e.queueType === 'RANKED_FLEX_SR');
-      const best = solo || flex;
-      if (best) {
-        const { mmr } = estimateMMR(best.tier, best.rank, best.leaguePoints, best.wins, best.losses);
-        entry.rankedMMR  = mmr;
-        entry.rankedTier = best.tier;
-      } else {
-        entry.rankedMMR = null;
-      }
-    } catch { /* skip on error */ }
-  }
-
-  lbSave();
-  renderLeaderboard();
-  lbRefreshing = false;
-  btn.classList.remove('spinning');
-  btn.disabled = false;
+// ── Server calls ──────────────────────────────────────────────────────────────
+async function lbServerUpsert(entry) {
+  try {
+    await fetch(`${PROXY}/leaderboard`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    });
+    // SSE will push the updated list to all clients automatically
+  } catch { /* non-fatal */ }
 }
 
-// ─── Hook into lookup to feed the leaderboard ─────────────────────────────────
-// Wrap renderResults to also upsert into lb
+async function lbDelete(key) {
+  try {
+    await fetch(`${PROXY}/leaderboard/${encodeURIComponent(key)}`, { method: 'DELETE' });
+    // SSE will push the updated list
+  } catch { /* non-fatal */ }
+}
+
+// ── SSE connection ────────────────────────────────────────────────────────────
+let _sseLastNewKey = null;
+
+function lbConnectSSE() {
+  const dot = document.getElementById('lbLiveDot');
+  const es  = new EventSource(`${PROXY}/leaderboard/stream`);
+
+  es.addEventListener('init', e => {
+    lbEntries = JSON.parse(e.data);
+    renderLeaderboard();
+    if (dot) dot.classList.remove('disconnected');
+  });
+
+  es.addEventListener('update', e => {
+    lbEntries = JSON.parse(e.data);
+    renderLeaderboard(_sseLastNewKey);
+    _sseLastNewKey = null;
+    if (dot) dot.classList.remove('disconnected');
+  });
+
+  es.onerror = () => {
+    if (dot) dot.classList.add('disconnected');
+    es.close();
+    // Reconnect after 5 s
+    setTimeout(lbConnectSSE, 5000);
+  };
+}
+
+lbConnectSSE();
+
+// ─── Hook into lookup to push to server leaderboard ──────────────────────────
 const _origRenderResults = renderResults;
 window.renderResults = function(displayName, tag, region, entries, normalData) {
   _origRenderResults(displayName, tag, region, entries, normalData);
@@ -1475,33 +1476,25 @@ window.renderResults = function(displayName, tag, region, entries, normalData) {
   const solo = entries.find(e => e.queueType === 'RANKED_SOLO_5x5');
   const flex = entries.find(e => e.queueType === 'RANKED_FLEX_SR');
   const best = solo || flex;
-  const rankedMMR = best ? estimateMMR(best.tier, best.rank, best.leaguePoints, best.wins, best.losses).mmr : null;
+  const rankedMMR = best
+    ? estimateMMR(best.tier, best.rank, best.leaguePoints, best.wins, best.losses).mmr
+    : null;
 
-  lbUpsert({
-    key:         `${displayName}#${tag}@${region}`,
+  const key = `${displayName}#${tag}@${region}`;
+  _sseLastNewKey = key; // mark this entry as "new" when SSE update arrives
+
+  lbServerUpsert({
+    key, displayName, tag, region,
     puuid:       window._lastLookupPuuid ?? '',
-    displayName, tag, region,
     rankedMMR,
     rankedTier:  best?.tier ?? null,
     normalMMR:   normalData?.mmr   ?? null,
     normalWR:    normalData?.wr    ?? null,
     normalGames: normalData?.total ?? 0,
-    checkedAt:   Date.now(),
-  }, true);
-
-  const c = document.getElementById('lbCount');
-  if (c) c.textContent = lbEntries.length ? `(${lbEntries.length})` : '';
+  });
 };
 
-// Store puuid so the leaderboard refresh can re-fetch ranks
-const _origLookup = lookup;
-window.lookup = async function() {
-  window._lastLookupPuuid = '';
-  await _origLookup();
-};
-
-// Patch inside lookup to capture puuid — we intercept after account resolution
-// by wrapping riotFetch responses for account endpoints
+// Capture puuid during lookup for the leaderboard entry
 const _origRiotFetch = riotFetch;
 window.riotFetch = async function(url) {
   const data = await _origRiotFetch(url);
@@ -1511,11 +1504,11 @@ window.riotFetch = async function(url) {
   return data;
 };
 
-// Init lb count badge on load
-(function() {
-  const c = document.getElementById('lbCount');
-  if (c && lbEntries.length) c.textContent = `(${lbEntries.length})`;
-})();
+const _origLookup = lookup;
+window.lookup = async function() {
+  window._lastLookupPuuid = '';
+  await _origLookup();
+};
 </script>
 </body>
 </html>
